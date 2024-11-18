@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ARQ Simulation</title>
+    <title>ARQ Protocol Selection</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-        <!-- Selection Screen -->
         <div id="selectionScreen">
             <header>
                 <h1>ARQ Protocol Simulation</h1>
@@ -25,26 +24,6 @@
                 <button type="button" onclick="startSimulation()">Start Simulation</button>
             </form>
         </div>
-
-        <!-- Simulation Screen -->
-        <div id="simulationScreen" style="display: none;">
-            <header>
-                <h1>ARQ Protocol Simulation</h1>
-                <p>Enter the Simulation Parameters</p>
-            </header>
-            <form>
-                <label for="totalFrames">Total number of frames:</label>
-                <input type="number" id="totalFrames" required>
-                <br><br>
-                <label for="lostFrame">Enter frame number to be lost (enter -1 for none):</label>
-                <input type="number" id="lostFrame" required>
-                <br><br>
-                <button type="button" onclick="runSimulation()">Run Simulation</button>
-            </form>
-            <canvas id="arqCanvas" width="1200" height="1000"></canvas>
-            <div id="outputMetrics"></div>
-        </div>
-
         <footer>
             <p>Designed by Vyshnav M (23BAI1195), Joelle Mary Suji (23BAI1563), Hridurag Nair K (23BAI1399)</p>
         </footer>
