@@ -1,51 +1,47 @@
-function startSimulation() {
-    const arqChoice = parseInt(document.getElementById("arqChoice").value);
-    
-    // Hide selection screen, show simulation screen
-    document.getElementById("selectionScreen").style.display = "none";
-    document.getElementById("simulationScreen").style.display = "block";
+let sent = 0;
+let lost = 0;
+let discarded = 0;
+let ack = 0;
+let transmissions = 0;
+let nack = 0;
 
-    // Store ARQ choice globally to use in the simulation
-    window.arqChoice = arqChoice;
+// Helper functions for delays and lost frames
+function delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function runSimulation() {
+// Start the simulation based on the selected protocol
+function startSimulation() {
+    const protocolChoice = document.getElementById("arqChoice").value;
+    localStorage.setItem("protocol", protocolChoice);
+    window.location.href = "simulation.html";
+}
+
+// Navigate back to the selection screen
+function goBack() {
+    window.location.href = "index.html";
+}
+
+// Main function to run the ARQ simulation
+async function runSimulation() {
     const totalFrames = parseInt(document.getElementById("totalFrames").value);
-    const lostFrame = parseInt(document.getElementById("lostFrame").value);
+    const lostFramesInput = document.getElementById("lostFrames").value.trim();
+    // const lostFrames = parseInt(document.getElementById("lostFrames").value);
+    const frameWindowSize = parseInt(
+        document.getElementById("frameSize").value
+    ); // Window size input
+    const lostFrames = lostFramesInput
+        ? lostFramesInput.split(",").map(Number)
+        : [];
+    const protocol = parseInt(localStorage.getItem("protocol"));
 
-    if (isNaN(totalFrames) || totalFrames <= 0 || lostFrame < -1 || lostFrame >= totalFrames) {
-        alert("Please enter valid values for the total number of frames and the lost frame.");
-        return;
-    }
-
+    // Clear canvas and output
     const canvas = document.getElementById("arqCanvas");
     const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    document.getElementById("outputMetrics").innerHTML = "";
 
-    const frameSize = 50;
-    const verticalSpacing = frameSize + 40;
-    const canvasHeight = 100 + (totalFrames * verticalSpacing);
-    canvas.height = canvasHeight > 1000 ? canvasHeight : 1000;
-
-    ctx.font = "16px Arial";
-
-    let subheading = '';
-    switch (window.arqChoice) {
-        case 1:
-            subheading = "Stop-and-Wait ARQ";
-            break;
-        case 2:
-            subheading = "Go-Back-N ARQ";
-            break;
-        case 3:
-            subheading = "Selective Repeat ARQ";
-            break;
-    }
-    
-    ctx.fillText(subheading, 400, 30);
-
-    ctx.fillText("Sender", 150, 60);
-    ctx.fillText("Receiver", 850, 60);
-
+    // Draw vertical lines for sender and receiver
     ctx.beginPath();
     ctx.moveTo(150, 70);
     ctx.lineTo(150, canvas.height - 40);
@@ -56,121 +52,209 @@ function runSimulation() {
     ctx.lineTo(850, canvas.height - 40);
     ctx.stroke();
 
-    const drawFrame = (frame, y, sender, isLost) => {
-        const x = sender ? 100 : 800;
-        ctx.fillStyle = isLost ? "red" : "green";
-        ctx.fillRect(x, y, frameSize, frameSize);
-        ctx.strokeRect(x, y, frameSize, frameSize);
-        ctx.fillStyle = "black";
-        ctx.fillText(`Frame ${frame}`, x + (frameSize / 4), y + frameSize / 2);
-    };
+    // Initialize statistics
 
-    const drawLine = (startX, startY, endX, endY, color) => {
-        ctx.strokeStyle = color;
-        ctx.beginPath();
-        ctx.moveTo(startX, startY);
-        ctx.lineTo(endX, endY);
-        ctx.stroke();
-    };
-
-    let totalAcks = 0;
-    let totalNacks = 0;
-    let discardedFrames = 0;
-    let lostFrames = 0;
-
-    switch (window.arqChoice) {
-        case 1:
-            for (let i = 0; i < totalFrames; i++) {
-                const y = 100 + (i * verticalSpacing);
-                drawFrame(i, y, true, i === lostFrame);
-                drawLine(150, y + frameSize / 2, 850, y + frameSize / 2, "black");
-
-                if (i === lostFrame) {
-                    ctx.fillText("Frame Lost", 450, y + frameSize / 2);
-                    drawFrame(i, y, false, true);
-                    discardedFrames++;
-                    lostFrames++;
-                    ctx.fillText(`Frame ${i} not acknowledged. Resending...`, 300, y + frameSize + 40);
-                } else {
-                    drawFrame(i, y, false, false);
-                    drawLine(850, y + frameSize / 2, 150, y + frameSize + 40, "blue");
-                    ctx.fillText(`ACK ${i}`, 400, y + frameSize + 40);
-                    totalAcks++;
-                }
-            }
-            break;
-        case 2:
-            const frameWindow = parseInt(prompt("Enter the frame window size: "));
-            for (let i = 0; i < totalFrames;) {
-                const windowEnd = Math.min(i + frameWindow, totalFrames);
-                let transmissionSuccessful = true;
-                let y = 100 + (i * verticalSpacing);
-
-                for (let j = i; j < windowEnd; j++) {
-                    drawFrame(j, y, true, j === lostFrame);
-                    drawLine(150, y + frameSize / 2, 850, y + frameSize / 2, "black");
-
-                    if (j === lostFrame) {
-                        ctx.fillText("Frame Lost", 450, y + frameSize / 2);
-                        transmissionSuccessful = false;
-                        discardedFrames++;
-                        lostFrames++;
-                        break;
-                    } else {
-                        drawFrame(j, y, false, false);
-                        drawLine(850, y + frameSize / 2, 150, y + frameSize + 40, "blue");
-                        ctx.fillText(`ACK ${j}`, 400, y + frameSize + 40);
-                        totalAcks++;
-                        y += verticalSpacing;
-                    }
-                }
-                if (!transmissionSuccessful) y += verticalSpacing;
-                i += windowEnd - i;
-            }
-            break;
-        case 3:
-            const received = new Array(totalFrames).fill(false);
-
-            for (let i = 0; i < totalFrames; i++) {
-                const y = 100 + (i * verticalSpacing);
-                drawFrame(i, y, true, i === lostFrame);
-                drawLine(150, y + frameSize / 2, 850, y + frameSize / 2, "black");
-
-                if (i === lostFrame) {
-                    ctx.fillText("Frame Lost", 450, y + frameSize / 2);
-                    discardedFrames++;
-                    lostFrames++;
-                } else {
-                    drawFrame(i, y, false, false);
-                    drawLine(850, y + frameSize / 2, 150, y + frameSize + 40, "blue");
-                    ctx.fillText(`ACK ${i}`, 400, y + frameSize + 40);
-                    received[i] = true;
-                    totalAcks++;
-                }
-            }
-
-            for (let i = 0; i < totalFrames; i++) {
-                if (!received[i]) {
-                    const y = 100 + (i * verticalSpacing) + 40;
-                    drawFrame(i, y, true, true);
-                    drawLine(150, y + frameSize / 2, 850, y + frameSize / 2, "red");
-                    drawFrame(i, y + 40, false, false);
-                    drawLine(850, y + 40 + frameSize / 2, 150, y + 80 + frameSize, "blue");
-                    ctx.fillText(`NACK ${i}`, 400, y + frameSize / 2);
-                    ctx.fillText(`Retransmit Frame ${i}`, 300, y + 40 + frameSize + 40);
-                    ctx.fillText(`ACK ${i}`, 400, y + 80 + frameSize + 40);
-                    totalNacks++;
-                }
-            }
-            break;
+    // Run simulation for the chosen protocol
+    if (protocol === 1) {
+        await stopAndWait(totalFrames, lostFrames, ctx);
+    } else if (protocol === 2) {
+        await goBackN(totalFrames, lostFrames, frameWindowSize, ctx);
+    } else if (protocol === 3) {
+        await selectiveRepeat(totalFrames, lostFrames, ctx);
+    } else {
+        alert("Invalid protocol selection!");
     }
 
-    const outputMetrics = document.getElementById("outputMetrics");
-    outputMetrics.innerHTML = `
-        <p>Total number of frames: ${totalFrames}</p>
-        <p>Total number of ACKs: ${totalAcks}</p>
-        <p>Total number of discarded frames: ${discardedFrames}</p>
-        <p>Total number of lost frames: ${lostFrames}</p>
-        ${window.arqChoice === 3 ? `<p>Total number of NACKs: ${totalNacks}</p>` : ""}
-    `;
+    // Display statistics
+    displayStats();
+
+    sent = 0;
+    lost = 0;
+    discarded = 0;
+    ack = 0;
+    transmissions = 0;
+    nack = 0;
+
+    // function updateStats(sent, discarded, ack, transmissions, nack) {
+    //     totalSent += sent;
+    //     totalDiscarded += discarded;
+    //     totalAckSent += ack;
+    //     totalTransmissions += transmissions;
+    //     totalNack += nack;
+    // }
+}
+
+// Stop-and-Wait ARQ
+async function stopAndWait(totalFrames, lostFrames, ctx) {
+    ctx.font = "16px Arial";
+    ctx.fillText("Stop-and-Wait ARQ", 500, 30);
+
+    for (let i = 0; i < totalFrames; i++) {
+        const y = 100 + i * 80;
+
+        // Draw the frame
+        ctx.fillStyle = "black";
+        ctx.fillText(`Frame ${i}`, 160, y + 30);
+        ctx.beginPath();
+        ctx.moveTo(200, y + 20);
+        ctx.lineTo(850, y + 20);
+        ctx.strokeStyle = lostFrames.includes(i) ? "red" : "green";
+        ctx.stroke();
+
+        // Simulate lost frame
+        if (lostFrames.includes(i)) {
+            ctx.fillStyle = "red";
+            ctx.fillText("Frame Lost", 400, y + 30);
+            lost++;
+            await delay(1000);
+
+            // Resend the lost frame
+            ctx.fillStyle = "black";
+            ctx.fillText(`Resending Frame ${i}`, 160, y + 60);
+            transmissions++;
+            ctx.beginPath();
+            ctx.moveTo(200, y + 50);
+            ctx.lineTo(850, y + 50);
+            ctx.strokeStyle = "green";
+            ctx.stroke();
+            // await delay(1000);
+        }
+
+        // Acknowledge the frame
+        if (!lostFrames.includes(i)) {
+            ctx.fillStyle = "green";
+            ctx.fillText(`ACK ${i}`, 600, y + 30);
+        }
+        ack++;
+        transmissions++;
+        await delay(1000);
+    }
+    sent = totalFrames;
+
+    ctx.fillStyle = "black";
+    ctx.fillText("Simulation Complete!", 500, 100 + totalFrames * 80);
+}
+
+// Go-Back-N ARQ
+async function goBackN(totalFrames, lostFrames, windowSize, ctx) {
+    ctx.font = "16px Arial";
+    ctx.fillText("Go-Back-N ARQ", 500, 30);
+    let frameNumber = 0;
+    let y = 100;
+
+    while (frameNumber < totalFrames) {
+        const endFrame = Math.min(frameNumber + windowSize, totalFrames);
+        ctx.fillText(
+            `Sending Frames ${frameNumber} to ${endFrame - 1}`,
+            160,
+            y
+        );
+        y += 20;
+
+        let resend = false;
+
+        for (let i = frameNumber; i < endFrame; i++) {
+            ctx.fillText(`Frame ${i}`, 160, y + 30);
+            ctx.beginPath();
+            ctx.moveTo(200, y + 20);
+            ctx.lineTo(850, y + 20);
+            ctx.strokeStyle = lostFrames.includes(i) ? "red" : "green";
+            ctx.stroke();
+
+            if (lostFrames.includes(i)) {
+                ctx.fillStyle = "red";
+                ctx.fillText("Frame Lost", 400, y + 30);
+                resend = true;
+                break;
+            } else {
+                ctx.fillStyle = "green";
+                ctx.fillText(`ACK ${i}`, 600, y + 30);
+                y += 60;
+            }
+        }
+
+        if (resend) {
+            ctx.fillText(
+                `Resending Frames ${frameNumber} to ${endFrame - 1}`,
+                160,
+                y
+            );
+            await delay(1000);
+        } else {
+            frameNumber += windowSize;
+        }
+
+        await delay(1000);
+    }
+
+    ctx.fillText("Simulation Complete!", 500, y + 40);
+}
+
+// Selective Repeat ARQ
+async function selectiveRepeat(totalFrames, lostFrames, ctx) {
+    ctx.font = "16px Arial";
+    ctx.fillText("Selective Repeat ARQ", 500, 30);
+
+    for (let i = 0; i < totalFrames; i++) {
+        const y = 100 + i * 80;
+        let frameSent = false;
+
+        // Ensure all frames (0 to totalFrames-1) are shown
+        ctx.fillText(`Frame ${i}`, 160, y + 30);
+        ctx.beginPath();
+        ctx.moveTo(200, y + 20);
+        ctx.lineTo(850, y + 20);
+        ctx.strokeStyle = lostFrames.includes(i) ? "red" : "green";
+        ctx.stroke();
+
+        if (lostFrames.includes(i)) {
+            ctx.fillStyle = "red";
+            ctx.fillText("Frame Lost", 400, y + 30);
+            await delay(1000);
+
+            // Resend frame
+            ctx.fillStyle = "black";
+            ctx.fillText(`NACK for Frame ${i}`, 160, y + 60);
+            ctx.fillText(`Resending Frame ${i}`, 160, y + 90);
+            ctx.beginPath();
+            ctx.moveTo(200, y + 80);
+            ctx.lineTo(850, y + 80);
+            ctx.strokeStyle = "green";
+            ctx.stroke();
+            ctx.fillText(`Frame ${i}`, 160, y + 110);
+            if (i !== totalFrames - 1) {
+                ctx.fillText(`ACK ${i}`, 600, y + 110);
+            }
+            await delay(1000);
+        } else {
+            ctx.fillStyle = "green";
+            frameSent = true;
+            ctx.fillText(`ACK ${i}`, 600, y + 30);
+            await delay(1000);
+        }
+    }
+
+    ctx.fillText("Simulation Complete!", 500, 100 + totalFrames * 80);
+}
+
+// Function to save canvas as an image
+function saveAsImage() {
+    const canvas = document.getElementById("arqCanvas");
+    const link = document.createElement("a");
+    link.download = "arq_simulation.png";
+    link.href = canvas.toDataURL();
+    link.click();
+}
+
+// Function to display statistics
+function displayStats() {
+    const stats = `
+      Total Frames Sent: ${sent}<br>
+      Total Lost Frames: ${lost}<br>
+      Total Discarded Frames: ${discarded}<br>
+      Total ACK Sent: ${ack}<br>
+      Total Transmissions (including retransmissions): ${transmissions}<br>
+      Total NACKs (Selective Repeat only): ${nack}
+  `;
+    document.getElementById("outputMetrics").innerHTML = stats;
 }
