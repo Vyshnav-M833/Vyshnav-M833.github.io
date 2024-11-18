@@ -1,54 +1,65 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ARQ Simulation</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div class="container">
-        <!-- Selection Screen -->
-        <div id="selectionScreen">
-            <header>
-                <h1>ARQ Protocol Simulation</h1>
-                <p>Select the ARQ Protocol to Simulate</p>
-            </header>
-            <form>
-                <label for="arqChoice">Choose the ARQ protocol:</label>
-                <select id="arqChoice" required>
-                    <option value="1">Stop-and-Wait ARQ</option>
-                    <option value="2">Go-Back-N ARQ</option>
-                    <option value="3">Selective Repeat ARQ</option>
-                </select>
-                <br><br>
-                <button type="button" onclick="startSimulation()">Start Simulation</button>
-            </form>
-        </div>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>ARQ Simulation</title>
+        <link rel="stylesheet" href="style.css" />
+        <style>
+            /* Add custom CSS to make canvas scrollable */
+            #canvas-container {
+                width: 100%;
+                height: 500px; /* Adjust as needed */
+                overflow-y: auto; /* Allows scrolling */
+                border: 1px solid #000; /* Optional border */
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div id="simulationScreen">
+                <header>
+                    <h1>ARQ Protocol Simulation</h1>
+                    <p>Enter the Simulation Parameters</p>
+                </header>
+                <form>
+                    <label for="totalFrames">Total number of frames:</label>
+                    <input type="number" id="totalFrames" required />
+                    <br /><br />
+                    <label for="frameSize"
+                        >Frame window size (for Go-Back-N):</label
+                    >
+                    <input type="number" id="frameSize" required />
+                    <br /><br />
+                    <label for="lostFrames"
+                        >Enter lost frames (comma-separated, e.g.,
+                        2,5,8):</label
+                    >
+                    <input type="text" id="lostFrames" required />
+                    <br /><br />
+                    <button type="button" onclick="runSimulation()">
+                        Run Simulation
+                    </button>
+                    <button type="button" onclick="goBack()">Go Back</button>
+                    <button type="button" onclick="saveAsImage()">
+                        Save as Image
+                    </button>
+                </form>
 
-        <!-- Simulation Screen -->
-        <div id="simulationScreen" style="display: none;">
-            <header>
-                <h1>ARQ Protocol Simulation</h1>
-                <p>Enter the Simulation Parameters</p>
-            </header>
-            <form>
-                <label for="totalFrames">Total number of frames:</label>
-                <input type="number" id="totalFrames" required>
-                <br><br>
-                <label for="lostFrame">Enter frame number to be lost (enter -1 for none):</label>
-                <input type="number" id="lostFrame" required>
-                <br><br>
-                <button type="button" onclick="runSimulation()">Run Simulation</button>
-            </form>
-            <canvas id="arqCanvas" width="1200" height="1000"></canvas>
-            <div id="outputMetrics"></div>
-        </div>
+                <!-- Wrap the canvas inside a scrollable container -->
+                <div id="canvas-container">
+                    <canvas id="arqCanvas" width="1200" height="1000"></canvas>
+                </div>
 
-        <footer>
-            <p>Designed by Vyshnav M (23BAI1195), Joelle Mary Suji (23BAI1563), Hridurag Nair K (23BAI1399)</p>
-        </footer>
-    </div>
-    <script src="arqsim.js"></script>
-</body>
+                <div id="outputMetrics"></div>
+            </div>
+            <footer>
+                <p>
+                    Designed by Vyshnav M (23BAI1195), Joelle Mary Suji
+                    (23BAI1563), Hridurag Nair K (23BAI1399)
+                </p>
+            </footer>
+        </div>
+        <script src="arqsim.js"></script>
+    </body>
 </html>
